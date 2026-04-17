@@ -45,8 +45,12 @@ pingall
 ```
 
 ## Performance
+**Throughput**
 ```bash
 h3 iperf -s &
 h1 iperf -c h3
+```
+**Latency**
+```
 h1 ping h3
 ```
