@@ -23,7 +23,10 @@ cd pox
 ## Flow Rule Management
 OpenFlow based flow rule management:
 ```bash
+pingall
 sh ovs-ofctl dump-flows s1
+pingall
+dpctl dump-flows
 ```
 
 ## Testing
