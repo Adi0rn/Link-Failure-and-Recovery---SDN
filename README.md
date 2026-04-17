@@ -8,7 +8,7 @@
 This project demonstrates how Software Defined Networking (SDN) can detect link failures and automatically reroute traffic using alternate paths.
 
 ## Topology
-2 Hosts and 3 Switches with redundant path.
+3 Hosts and 3 Switches in a linear structure.
 ```bash
 sudo mn --topo linear,3 --controller=remote,ip=127.0.0.1,port=6633
 ```
