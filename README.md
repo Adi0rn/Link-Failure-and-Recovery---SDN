@@ -14,15 +14,16 @@ sudo mn --topo linear,3 --controller=remote,ip=127.0.0.1,port=6633
 ```
 
 ## Controller
-The controller uses POX.
+Implementation uses POX’s built-in L2 learning controller module instead of a custom controller.
 ```bash
+cd pox
 ./pox.py forwarding.l2_learning
 ```
 
 ## Flow Rule Management
-Based on MAC addresses and ports:
+OpenFlow based flow rule management:
 ```bash
-dpctl dump-flows
+sh ovs-ofctl dump-flows s1
 ```
 
 ## Testing
@@ -45,5 +46,7 @@ pingall
 
 ## Performance
 ```bash
-iperf h1 h3
+h3 iperf -s &
+h1 iperf -c h3
+h1 ping h3
 ```
