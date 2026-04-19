@@ -8,16 +8,18 @@
 This project demonstrates how Software Defined Networking (SDN) can detect link failures and automatically reroute traffic using alternate paths.
 
 ## Topology
-3 Hosts and 3 Switches in a linear structure.
+Topology involves 2 hosts and 3 switches with backup path
 ```bash
-sudo mn --topo linear,3 --controller=remote,ip=127.0.0.1,port=6633
+sudo mn --custom topo.py --topo diamond --controller=remote
 ```
 
 ## Controller
 Implementation uses POX’s built-in L2 learning controller module instead of a custom controller.
 ```bash
 cd pox
-./pox.py forwarding.l2_learning
+~/pox$ nano topo.py
+~/pox$ nano controller.py
+~/pox$ sudo mn -c
 ```
 
 ## Flow Rule Management
@@ -50,10 +52,10 @@ pingall
 ## Performance
 **Throughput**
 ```bash
-h3 iperf -s &
-h1 iperf -c h3
+h2 iperf -s &
+h1 iperf -c h2
 ```
 **Latency**
 ```
-h1 ping h3
+h1 ping h2
 ```
