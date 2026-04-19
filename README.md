@@ -1,0 +1,59 @@
+# Link Failure and Recovery - SDN mininet project
+
+## Student details
+- **Name:** Adithya Ajith Pillai
+- **SRN:** PES2UG24AM014
+
+## Problem Statement
+This project demonstrates how Software Defined Networking (SDN) can detect link failures and automatically reroute traffic using alternate paths.
+
+## Topology
+3 Hosts and 3 Switches in a linear structure.
+```bash
+sudo mn --topo linear,3 --controller=remote,ip=127.0.0.1,port=6633
+```
+
+## Controller
+Implementation uses POX’s built-in L2 learning controller module instead of a custom controller.
+```bash
+cd pox
+./pox.py forwarding.l2_learning
+```
+
+## Flow Rule Management
+OpenFlow based flow rule management:
+```bash
+pingall
+sh ovs-ofctl dump-flows s1
+pingall
+dpctl dump-flows
+```
+
+## Testing
+**1. Normal:**
+```bash
+pingall
+```
+
+**2. Link Failure**
+```bash
+link s1 s2 down
+pingall
+```
+
+**3. Recovery**
+```bash
+link s1 s2 up
+pingall
+```
+
+## Performance
+**Throughput**
+```bash
+h3 iperf -s &
+h1 iperf -c h3
+```
+**Latency**
+```
+h1 ping h3
+```
