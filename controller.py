@@ -1,73 +1,54 @@
-from ryu.base import app_manager
-from ryu.controller import ofp_event
-from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
-from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_3
+from pox.core import core
+import pox.openflow.libopenflow_01 as of
 
-class SimpleSwitch(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+log = core.getLogger()
 
-    def __init__(self, *args, **kwargs):
-        super(SimpleSwitch, self).__init__(*args, **kwargs)
-        self.mac_to_port = {}
+# Store MAC → port mapping
+mac_to_port = {}
 
-    @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
-    def switch_features_handler(self, ev):
-        datapath = ev.msg.datapath
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
+def _handle_ConnectionUp(event):
+    log.info("Switch %s has connected", event.dpid)
 
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER)]
-        self.add_flow(datapath, 0, match, actions)
+def _handle_PacketIn(event):
+    packet = event.parsed
+    dpid = event.dpid
+    in_port = event.port
 
-    def add_flow(self, datapath, priority, match, actions):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
+    if not packet.parsed:
+        log.warning("Ignoring incomplete packet")
+        return
 
-        inst = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
+    src = packet.src
+    dst = packet.dst
 
-        mod = parser.OFPFlowMod(
-            datapath=datapath,
-            priority=priority,
-            match=match,
-            instructions=inst
-        )
-        datapath.send_msg(mod)
+    if dpid not in mac_to_port:
+        mac_to_port[dpid] = {}
 
-    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
-    def packet_in_handler(self, ev):
-        msg = ev.msg
-        datapath = msg.datapath
-        parser = datapath.ofproto_parser
-        ofproto = datapath.ofproto
+    # Learn source MAC
+    mac_to_port[dpid][src] = in_port
 
-        in_port = msg.match['in_port']
-        dpid = datapath.id
+    # Check if destination known
+    if dst in mac_to_port[dpid]:
+        out_port = mac_to_port[dpid][dst]
+    else:
+        out_port = of.OFPP_FLOOD
 
-        self.mac_to_port.setdefault(dpid, {})
+    # Create flow rule
+    msg = of.ofp_flow_mod()
+    msg.match.in_port = in_port
+    msg.actions.append(of.ofp_action_output(port=out_port))
 
-        src = msg.data[6:12]
-        dst = msg.data[0:6]
+    event.connection.send(msg)
 
-        self.mac_to_port[dpid][src] = in_port
+    # Send packet
+    pkt_out = of.ofp_packet_out()
+    pkt_out.data = event.ofp
+    pkt_out.actions.append(of.ofp_action_output(port=out_port))
+    pkt_out.in_port = in_port
 
-        if dst in self.mac_to_port[dpid]:
-            out_port = self.mac_to_port[dpid][dst]
-        else:
-            out_port = ofproto.OFPP_FLOOD
+    event.connection.send(pkt_out)
 
-        actions = [parser.OFPActionOutput(out_port)]
-        match = parser.OFPMatch(in_port=in_port)
-
-        self.add_flow(datapath, 1, match, actions)
-
-        out = parser.OFPPacketOut(
-            datapath=datapath,
-            buffer_id=msg.buffer_id,
-            in_port=in_port,
-            actions=actions,
-            data=msg.data
-        )
-        datapath.send_msg(out)
+def launch():
+    core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
+    core.openflow.addListenerByName("PacketIn", _handle_PacketIn)
+    log.info("Custom POX Controller Started")
