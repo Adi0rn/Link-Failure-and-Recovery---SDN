@@ -14,7 +14,7 @@ sudo mn --custom topo.py --topo diamond --controller=remote
 ```
 
 ## Controller
-Implementation uses POX’s built-in L2 learning controller module instead of a custom controller.
+Custom controller used- controller.py
 ```bash
 cd pox
 ~/pox$ nano topo.py
